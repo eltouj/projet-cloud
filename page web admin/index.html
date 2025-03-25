@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Colis - Admin</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .container {
+            margin-top: 30px;
+        }
+        .status-arrived { color: green; font-weight: bold; }
+        .status-denied { color: red; font-weight: bold; }
+        .status-encours { color: orange; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="mb-4 text-center">Gestion des Colis</h2>
+        <table class="table table-bordered table-striped text-center">
+            <thead class="table-dark">
+                <tr>
+                    <thead class="table-dark">
+                        <tr>
+                            <th>ID</th>
+                            <th>Client</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>PackageDetails</th>
+                            <th>Depart</th>
+                            <th>Arrivé</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                </tr>
+            </thead>
+            <tbody id="colisTable">
+                <!-- Les colis seront insérés ici via AJAX -->
+            </tbody>
+        </table>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        function loadColis() {
+            $.ajax({
+                url: 'get_colis.php',
+                method: 'GET',
+                success: function(response) {
+                    $('#colisTable').html(response);
+                }
+            });
+        }
+        function updateStatus(id, status) {
+    if (!confirm("Êtes-vous sûr de vouloir changer le statut?")) {
+        return;
+    }
+    
+    $.ajax({
+        url: 'update_status.php',
+        method: 'POST',
+        data: { 
+            colis_id: id, 
+            status: status 
+        },
+        success: function(response) {
+            try {
+                const result = JSON.parse(response);
+                if (result.status === 'success') {
+                    // Refresh the table after successful update
+                    loadColis();
+                } else {
+                    alert('Erreur: ' + result.message);
+                }
+            } catch (e) {
+                alert('Réponse inattendue du serveur');
+            }
+        },
+        error: function(xhr, status, error) {
+            alert('Erreur de connexion: ' + error);
+        }
+    });
+}
+
+function loadColis() {
+    $.ajax({
+        url: 'get_colis.php',
+        method: 'GET',
+        beforeSend: function() {
+            // Optional: Show loading indicator
+            $('#colisTable').html('<tr><td colspan="9" class="text-center">Chargement...</td></tr>');
+        },
+        success: function(response) {
+            $('#colisTable').html(response);
+        },
+        error: function(xhr, status, error) {
+            $('#colisTable').html('<tr><td colspan="9" class="text-danger">Erreur de chargement: ' + error + '</td></tr>');
+        }
+    });
+}
+
+$(document).ready(function() {
+    loadColis();
+    
+    // Optional: Auto-refresh every 30 seconds
+    setInterval(loadColis, 30000);
+});
+        $(document).ready(function() {
+            loadColis();
+        });
+    </script>
+</body>
+</html>
