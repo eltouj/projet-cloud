@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page Client - Demande de Colis</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://atlas.microsoft.com/sdk/javascript/mapcontrol/2/atlas.min.css" type="text/css">
+    <script src="https://atlas.microsoft.com/sdk/javascript/mapcontrol/2/atlas.min.js"></script>
+    <script src="https://atlas.microsoft.com/sdk/javascript/mapcontrol/2/atlas-service.min.js"></script>
+
+    <style>
+        html, body {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #myMap {
+            width: 100%;
+            height: 75%;
+        }
+
+        .form-section {
+            padding: 20px;
+            background-color: #f1f1f1;
+            margin: 20px;
+            border-radius: 10px;
+        }
+
+        label {
+            font-size: 14pt;
+            font-weight: bold;
+            color: #333;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            background-color: #6f2232;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #c3073f;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Demande de Transport de Colis</h1>
+</header>
+
+<main>
+    <section class="form-section">
+        <h2>Ajoutez les détails de votre colis</h2>
+        <form action="submit_request.php" method="post">
+            <label for="name">Nom du Client:</label>
+            <input type="text" id="name" name="name" required>
+
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" required>
+
+            <label for="phone">Téléphone:</label>
+            <input type="tel" id="phone" name="phone" required>
+
+            <label for="package">Colis:</label>
+            <input type="text" id="package" name="package" required>
+
+            <label for="startLocation">Lieu de départ:</label>
+            <select id="startLocation" name="startLocation">
+                <option value="Tunis" data-lat="36.8065" data-lon="10.1815">Tunis</option>
+                <option value="Sfax" data-lat="34.7406" data-lon="10.7603">Sfax</option>
+                <option value="Sousse" data-lat="35.8254" data-lon="10.6360">Sousse</option>
+                <option value="Nabeul" data-lat="36.4561" data-lon="10.7377">Nabeul</option>
+                <option value="Hammamet" data-lat="36.4000" data-lon="10.6167">Hammamet</option>
+                <option value="Mahdia" data-lat="35.5047" data-lon="11.0622">Mahdia</option>
+            </select>
+
+            <label for="endLocation">Lieu d'arrivée:</label>
+            <select id="endLocation" name="endLocation">
+                <option value="Sousse" data-lat="35.8254" data-lon="10.6360">Sousse</option>
+                <option value="Tunis" data-lat="36.8065" data-lon="10.1815">Tunis</option>
+                <option value="Sfax" data-lat="34.7406" data-lon="10.7603">Sfax</option>
+                <option value="Nabeul" data-lat="36.4561" data-lon="10.7377">Nabeul</option>
+                <option value="Hammamet" data-lat="36.4000" data-lon="10.6167">Hammamet</option>
+                <option value="Mahdia" data-lat="35.5047" data-lon="11.0622">Mahdia</option>
+            </select>
+
+            <button type="submit">Soumettre</button>
+        </form>
+    </section>
+</main>
+
+<div id="myMap"></div>
+
+<script>
+    var map, datasource;
+
+    function InitMap() {
+        map = new atlas.Map("myMap", {
+            authOptions: {
+                authType: 'subscriptionKey',
+                subscriptionKey: '9ERFQnJ3zBV3xmvAFHNXEIz0TWEcnWvR6Vp9eFL376SwF0Ry82E0JQQJ99BCACYeBjF09WyQAAAgAZMP1UD8'
+            }
+        });
+
+        map.events.add('ready', function () {
+            datasource = new atlas.source.DataSource();
+            map.sources.add(datasource);
+            
+            // Add a layer for rendering the route line
+            map.layers.add(new atlas.layer.LineLayer(datasource, null, {
+                strokeColor: 'rgb(0, 0, 0)',
+                strokeWidth: 7
+            }), 'labels');
+            
+            // Add a layer for rendering the pins
+            map.layers.add(new atlas.layer.SymbolLayer(datasource, null, {
+                iconOptions: {
+                    allowOverlap: true
+                }
+            }), 'labels');
+            
+            updateRoute(); // Draw initial route
+        });
+    }
+
+    function updateRoute() {
+        var startLocation = document.getElementById("startLocation");
+        var endLocation = document.getElementById("endLocation");
+
+        var startLat = parseFloat(startLocation.options[startLocation.selectedIndex].dataset.lat);
+        var startLon = parseFloat(startLocation.options[startLocation.selectedIndex].dataset.lon);
+
+        var endLat = parseFloat(endLocation.options[endLocation.selectedIndex].dataset.lat);
+        var endLon = parseFloat(endLocation.options[endLocation.selectedIndex].dataset.lon);
+
+        var startPoint = new atlas.data.Feature(new atlas.data.Point([startLon, startLat]), {
+            title: startLocation.value,
+            icon: 'pin-round-red'
+        });
+
+        var endPoint = new atlas.data.Feature(new atlas.data.Point([endLon, endLat]), {
+            title: endLocation.value,
+            icon: 'pin-blue'
+        });
+
+        // Clear previous data
+        datasource.clear();
+        
+        // Add start and end points
+        datasource.add([startPoint, endPoint]);
+
+        // Fit the map window to the bounding box
+        map.setCamera({
+            bounds: atlas.data.BoundingBox.fromData([startPoint, endPoint]),
+            padding: 100
+        });
+
+        // Route URL to calculate the route
+        var routeURL = `https://atlas.microsoft.com/route/directions/json?api-version=1.0&query=${startLat},${startLon}:${endLat},${endLon}&travelMode=car&subscription-key=9ERFQnJ3zBV3xmvAFHNXEIz0TWEcnWvR6Vp9eFL376SwF0Ry82E0JQQJ99BCACYeBjF09WyQAAAgAZMP1UD8`;
+
+        fetch(routeURL)
+            .then(response => response.json())
+            .then(data => {
+                if (data.routes && data.routes.length > 0) {
+                    // Convert route points to the correct format
+                    var routePoints = data.routes[0].legs[0].points.map(function(point) {
+                        return [point.longitude, point.latitude];
+                    });
+                    
+                    var routeLine = new atlas.data.LineString(routePoints);
+                    var routeLineFeature = new atlas.data.Feature(routeLine);
+                    
+                    // Add the route line to the data source
+                    datasource.add(routeLineFeature);
+                }
+            })
+            .catch(error => {
+                console.error("Error fetching the route:", error);
+            });
+    }
+
+    // Event listeners for select changes
+    document.getElementById('startLocation').addEventListener('change', updateRoute);
+    document.getElementById('endLocation').addEventListener('change', updateRoute);
+
+    // Initialize the map on page load
+    window.onload = InitMap;
+</script>
+
+</body>
+</html>
